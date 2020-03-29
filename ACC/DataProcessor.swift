@@ -27,11 +27,11 @@ class DataProcessor {
     var delegate: DataProcessorDelegate? = nil
     
     func newData(type: speedDataType, sensorData: ThreeAxesSystemDouble) {
-        delegate?.sendingNewData(self, type: type, data: sensorData)
+        delegate?.sendingNewData(person: self, type: type, data: sensorData)
     }
     
     func newStatus(status: String) {
-        delegate?.sendingNewStatus(self, status: status)
+        delegate?.sendingNewStatus(person: self, status: status)
     }
     
     // MARK: test param
@@ -40,7 +40,7 @@ class DataProcessor {
     
     // MARK: System parameters setup
     let gravityConstant = 9.80665
-    let publicDB = NSUserDefaults.standardUserDefaults()
+    let publicDB = UserDefaults.standard
     var accelerometerUpdateInterval: Double = 0.01
     var gyroUpdateInterval: Double = 0.01
     var deviceMotionUpdateInterval: Double = 0.03
@@ -67,7 +67,7 @@ class DataProcessor {
     
     // MARK: Static judement
     var staticStateJudge = (modulAcc: false, modulGyro: false, modulDiffAcc: false) // true: static false: dynamic
-    var arrayForStatic = [Double](count: 7, repeatedValue: -1)
+    var arrayForStatic = [Double](repeating: -1, count: 7)
     var index = 0
     var modulusDiff = -1.0
     
@@ -102,25 +102,25 @@ class DataProcessor {
         motionManager.deviceMotionUpdateInterval = deviceMotionUpdateInterval
         
         // Recording data
-        motionManager.startAccelerometerUpdatesToQueue(NSOperationQueue.currentQueue()!, withHandler: { (accelerometerData: CMAccelerometerData?, NSError) -> Void in
-            self.outputAccData(accelerometerData!.acceleration)
-            if NSError != nil {
-                print("\(NSError)")
+        motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: { (accelerometerData: CMAccelerometerData?, NSError) -> Void in
+            self.outputAccData(acceleration: accelerometerData!.acceleration)
+            if let error = NSError {
+                print("\(error)")
             }
         })
         
-        motionManager.startGyroUpdatesToQueue(NSOperationQueue.currentQueue()!, withHandler: { (gyroData: CMGyroData?, NSError) -> Void in
-            self.outputRotData(gyroData!.rotationRate)
-            if NSError != nil {
-                print("\(NSError)")
+        motionManager.startGyroUpdates(to: OperationQueue.current!, withHandler: { (gyroData: CMGyroData?, NSError) -> Void in
+            self.outputRotData(rotation: gyroData!.rotationRate)
+            if let error = NSError {
+                print("\(error)")
             }
         })
         
-        motionManager.startDeviceMotionUpdatesUsingReferenceFrame(CMAttitudeReferenceFrame.XArbitraryCorrectedZVertical , toQueue: NSOperationQueue.currentQueue()!, withHandler: { (motion,  error) in
+        motionManager.startDeviceMotionUpdates(using: CMAttitudeReferenceFrame.xArbitraryCorrectedZVertical , to: OperationQueue.current!, withHandler: { (motion,  error) in
             if motion != nil {
-                self.XArbitraryCorrectedZVertical(motion!)
+                self.XArbitraryCorrectedZVertical(motion: motion!)
             }
-            if error != nil {
+            if let error = error {
                 print("\(error)")
             }
         })
@@ -150,7 +150,7 @@ class DataProcessor {
                 performanceDataArrayZ.append(z)
                 if count == performanceDataSize {
                     //print(performanceDataArrayX)
-                    performance(performanceDataArrayX, arrY: performanceDataArrayY, arrZ: performanceDataArrayZ, performanceDataSize: performanceDataSize)
+                    performance(arrX: performanceDataArrayX, arrY: performanceDataArrayY, arrZ: performanceDataArrayZ, performanceDataSize: performanceDataSize)
                 }
                 count += 1
             }
@@ -167,13 +167,13 @@ class DataProcessor {
             test = KalmanFilter()
         }
         
-        (absSys.accelerate.x, absSys.accelerate.y, absSys.accelerate.z) = test.filter(x, y: y, z: z)
+        (absSys.accelerate.x, absSys.accelerate.y, absSys.accelerate.z) = test.filter(x: x, y: y, z: z)
         
         determineVelocityAndCoculateDistance()
         
-        newData(speedDataType.accelerate, sensorData: absSys.accelerate)
-        newData(speedDataType.velocity, sensorData: absSys.velocity)
-        newData(speedDataType.distance, sensorData: absSys.distance)
+        newData(type: speedDataType.accelerate, sensorData: absSys.accelerate)
+        newData(type: speedDataType.velocity, sensorData: absSys.velocity)
+        newData(type: speedDataType.distance, sensorData: absSys.distance)
         
         absSys.accelerate.x = 0
         absSys.accelerate.y = 0
@@ -185,7 +185,7 @@ class DataProcessor {
         // Static Judgement Condition 1 && 2 && 3
         if staticStateJudge.modulAcc && staticStateJudge.modulGyro && staticStateJudge.modulDiffAcc {
             
-            newStatus("static state") // sending status to delegate
+            newStatus(status: "static state") // sending status to delegate
             
             absSys.velocity.x = 0
             absSys.velocity.y = 0
@@ -193,7 +193,7 @@ class DataProcessor {
             
         } else {
             
-            newStatus("dynamic state") // sending status to delegate
+            newStatus(status: "dynamic state") // sending status to delegate
             
 
             if fabs(absSys.accelerate.x) > accelerationThreshold {
@@ -233,7 +233,7 @@ class DataProcessor {
         
         
         // Static Judgement Condition 1
-        if fabs(modulus(accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z) - gravityConstant) < staticStateJudgeThreshold.accModulus {
+        if fabs(modulus(x: accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z) - gravityConstant) < staticStateJudgeThreshold.accModulus {
             staticStateJudge.modulAcc = true
         } else {
             staticStateJudge.modulAcc = false
@@ -246,15 +246,15 @@ class DataProcessor {
         gyroSys.accelerate.y = rotation.y
         gyroSys.accelerate.z = rotation.z
         
-        var attitude = motionManager.deviceMotion!.attitude
-        gyroSys.rotation.pitch = attitude.pitch*180/M_PI
-        gyroSys.rotation.roll = attitude.roll*180/M_PI
-        gyroSys.rotation.yaw = attitude.yaw*180/M_PI
+        let attitude = motionManager.deviceMotion!.attitude
+        gyroSys.rotation.pitch = attitude.pitch*180/Double.pi
+        gyroSys.rotation.roll = attitude.roll*180/Double.pi
+        gyroSys.rotation.yaw = attitude.yaw*180/Double.pi
         
-        newData(speedDataType.rotation, sensorData: gyroSys.rotation)
+        newData(type: speedDataType.rotation, sensorData: gyroSys.rotation)
         
         // Static Judgement Condition 2
-        if modulus(gyroSys.accelerate.x, y: gyroSys.accelerate.y, z: gyroSys.accelerate.z) < staticStateJudgeThreshold.gyroModulus {
+        if modulus(x: gyroSys.accelerate.x, y: gyroSys.accelerate.y, z: gyroSys.accelerate.z) < staticStateJudgeThreshold.gyroModulus {
             staticStateJudge.modulGyro = true
         } else {
             staticStateJudge.modulGyro = false
@@ -271,19 +271,19 @@ class DataProcessor {
                 arrayForStatic[i] = arrayForStatic[i + 1]
                 accModulusAvg += arrayForStatic[i]
             }
-            arrayForStatic[index - 1] = modulus(accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z)
+            arrayForStatic[index - 1] = modulus(x: accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z)
             accModulusAvg += arrayForStatic[index - 1]
             accModulusAvg /= Double(arrayForStatic.count)
-            modulusDiff = modulusDifference(arrayForStatic, avgModulus: accModulusAvg)
+            modulusDiff = modulusDifference(arr: arrayForStatic, avgModulus: accModulusAvg)
         } else {
-            arrayForStatic[index] = modulus(accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z)
+            arrayForStatic[index] = modulus(x: accSys.accelerate.x, y: accSys.accelerate.y, z: accSys.accelerate.z)
             index += 1
             if index == arrayForStatic.count {
                 for element in arrayForStatic {
                     accModulusAvg += element
                 }
                 accModulusAvg /= Double(arrayForStatic.count)
-                modulusDiff = modulusDifference(arrayForStatic, avgModulus: accModulusAvg)
+                modulusDiff = modulusDifference(arr: arrayForStatic, avgModulus: accModulusAvg)
             }
         }
     }
@@ -294,26 +294,26 @@ class DataProcessor {
         var resultX = 0.0
         var resultY = 0.0
         var resultZ = 0.0
-        var outX = Array(count: performanceDataSize, repeatedValue:0.0)
-        var outY = Array(count: performanceDataSize, repeatedValue:0.0)
-        var outZ = Array(count: performanceDataSize, repeatedValue:0.0)
+        var outX = Array(repeating: 0.0, count: performanceDataSize)
+        var outY = Array(repeating: 0.0, count: performanceDataSize)
+        var outZ = Array(repeating: 0.0, count: performanceDataSize)
         
         test = RawFilter()
         for index in 0..<performanceDataSize {
-            (outX[index], outY[index], outZ[index]) = test.filter(arrX[index], y: arrY[index], z: arrZ[index])
+            (outX[index], outY[index], outZ[index]) = test.filter(x: arrX[index], y: arrY[index], z: arrZ[index])
         }
-        resultX = standardDeviation(outX)
-        resultY = standardDeviation(outY)
-        resultZ = standardDeviation(outZ)
+        resultX = standardDeviation(arr: outX)
+        resultY = standardDeviation(arr: outY)
+        resultZ = standardDeviation(arr: outZ)
         print("Raw       :", resultX, resultY, resultZ)
         
         test = ThreePointFilter()
         for index in 0..<performanceDataSize {
-            (outX[index], outY[index], outZ[index]) = test.filter(arrX[index], y: arrY[index], z: arrZ[index])
+            (outX[index], outY[index], outZ[index]) = test.filter(x: arrX[index], y: arrY[index], z: arrZ[index])
         }
-        resultX = standardDeviation(outX)
-        resultY = standardDeviation(outY)
-        resultZ = standardDeviation(outZ)
+        resultX = standardDeviation(arr: outX)
+        resultY = standardDeviation(arr: outY)
+        resultZ = standardDeviation(arr: outZ)
         print("ThreePoint:", resultX, resultY, resultZ)
     }
 

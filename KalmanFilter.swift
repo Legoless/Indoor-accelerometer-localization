@@ -9,11 +9,17 @@
 import Foundation
 import CoreMotion
 
-// MARK: operator define
-infix operator ^ {}
-func ^ (radix: Double, power: Double) -> Double {
-    return pow(radix, power)
+precedencegroup PowerPrecedence {
+    higherThan: MultiplicationPrecedence
+    associativity: left
 }
+
+infix operator ^ : PowerPrecedence
+
+func ^ (num: Double, power: Double) -> Double {
+    return pow(num, power)
+}
+
 
 struct System {
     var isCalibrated = true
@@ -190,8 +196,8 @@ func SimpleLinearRegression (x: [Double], y: [Double]) -> (Double, Double) {
 func standardDeviation(arr : [Double]) -> Double
 {
     let length = Double(arr.count)
-    let avg = arr.reduce(0, combine: {$0 + $1}) / length
-    let sumOfSquaredAvgDiff = arr.map { pow($0 - avg, 2.0)}.reduce(0, combine: {$0 + $1})
+    let avg = arr.reduce(0, {$0 + $1}) / length
+    let sumOfSquaredAvgDiff = arr.map { pow($0 - avg, 2.0)}.reduce(0, {$0 + $1})
     return sqrt(sumOfSquaredAvgDiff / length)
 }
 
