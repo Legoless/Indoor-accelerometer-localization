@@ -9,10 +9,15 @@
 import Foundation
 import CoreMotion
 
-// MARK: operator define
-infix operator ^ {}
-func ^ (radix: Double, power: Double) -> Double {
-    return pow(radix, power)
+precedencegroup PowerPrecedence {
+    higherThan: MultiplicationPrecedence
+    associativity: left
+}
+
+infix operator ^ : PowerPrecedence
+
+func ^ (num: Double, power: Double) -> Double {
+    return pow(num, power)
 }
 
 struct System {
@@ -26,6 +31,7 @@ struct System {
     var kValue = ThreeAxesSystemDouble()
     var velocity = ThreeAxesSystemDouble()
     var distance = ThreeAxesSystemDouble()
+    var rotation = ThreeAxesSystemDouble()
     
     var kalman = ThreeAxesSystemKalman()
     
@@ -61,6 +67,9 @@ struct ThreeAxesSystemDouble {
     var x = 0.0
     var y = 0.0
     var z = 0.0
+    var roll = 0.0
+    var pitch = 0.0
+    var yaw = 0.0
 }
 
 struct ThreeAxesSystem<Element> {
@@ -106,9 +115,9 @@ class KalmanFilter : Filter {
         F[0,3] = 1.0
         F[1,4] = 1.0
         F[2,5] = 1.0
-        F[0,6] = 1/2*deviceMotionUpdateInterval^2
-        F[1,7] = 1/2*deviceMotionUpdateInterval^2
-        F[2,8] = 1/2*deviceMotionUpdateInterval^2
+        F[0,6] = 1.0 / 2.0 * deviceMotionUpdateInterval ^ 2
+        F[1,7] = 1.0 / 2.0 * deviceMotionUpdateInterval ^ 2
+        F[2,8] = 1.0 / 2.0 * deviceMotionUpdateInterval ^ 2
         F[3,3] = 1.0
         F[4,4] = 1.0
         F[5,5] = 1.0
@@ -152,7 +161,6 @@ class KalmanFilter : Filter {
         r = value
     }
 }
-
 func SimpleLinearRegression (x: [Double], y: [Double]) -> (Double, Double) {
     
     // x and y should be arrays of points. 
@@ -186,8 +194,8 @@ func SimpleLinearRegression (x: [Double], y: [Double]) -> (Double, Double) {
 func standardDeviation(arr : [Double]) -> Double
 {
     let length = Double(arr.count)
-    let avg = arr.reduce(0, combine: {$0 + $1}) / length
-    let sumOfSquaredAvgDiff = arr.map { pow($0 - avg, 2.0)}.reduce(0, combine: {$0 + $1})
+    let avg = arr.reduce(0, {$0 + $1}) / length
+    let sumOfSquaredAvgDiff = arr.map { pow($0 - avg, 2.0)}.reduce(0, {$0 + $1})
     return sqrt(sumOfSquaredAvgDiff / length)
 }
 

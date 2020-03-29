@@ -23,7 +23,7 @@ struct Matrix {
         self.rows = rows
         self.columns = columns
         self.shape = (rows, columns)
-        grid = Array(count: rows * columns, repeatedValue: 0.0)
+        grid = Array(repeating: 0.0, count: rows * columns)
     }
     func indexIsValid(row: Int, column: Int) -> Bool {
         return row >= 0 && row < rows && column >= 0 && column < columns
@@ -71,11 +71,14 @@ struct Matrix {
     func invert(matrix : [Double]) -> [Double] {
         var inMatrix = matrix
         var N = __CLPK_integer(sqrt(Double(matrix.count)))
-        var pivots = [__CLPK_integer](count: Int(N), repeatedValue: 0)
-        var workspace = [Double](count: Int(N), repeatedValue: 0.0)
+        var pivots = [__CLPK_integer](repeating: 0, count: Int(N))
+        var workspace = [Double](repeating: 0.0, count: Int(N))
         var error : __CLPK_integer = 0
-        dgetrf_(&N, &N, &inMatrix, &N, &pivots, &error)
-        dgetri_(&N, &inMatrix, &N, &pivots, &workspace, &N, &error)
+
+        withUnsafeMutablePointer(to: &N) {
+            dgetrf_($0, $0, &inMatrix, $0, &pivots, &error)
+            dgetri_($0, &inMatrix, $0, &pivots, &workspace, $0, &error)
+        }
         return inMatrix
     }
     

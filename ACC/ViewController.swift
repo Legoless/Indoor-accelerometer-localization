@@ -15,9 +15,7 @@ class ViewController: UIViewController, DataProcessorDelegate {
     
     // MARK: Model
     var dataSource: DataProcessor = DataProcessor()
-    let publicDB = NSUserDefaults.standardUserDefaults()
-    
-
+    let publicDB = UserDefaults.standard
     
     // MARK: Outlets
     
@@ -48,13 +46,13 @@ class ViewController: UIViewController, DataProcessorDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         dataSource.startsDetection()
-        //gradientView.colorSetUp(UIColor.yellowColor().CGColor, bottomColor: UIColor.yellowColor().CGColor)
+        //gradientView.colorSetUp(UIColor.yellow.cgColor, bottomColor: UIColor.yellow.cgColor)
         //self.reset()
     }
 
     // MARK: Functions
-    override func viewWillTransitionToSize(size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
-        if UIDevice.currentDevice().orientation.isLandscape.boolValue {
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        if UIDevice.current.orientation.isLandscape {
             // Landscape orientation
             currentSpeedLabel.text = ""
             currentSpeed.text = ""
@@ -69,12 +67,12 @@ class ViewController: UIViewController, DataProcessorDelegate {
     }
     
     
-    override func viewWillDisappear(animated: Bool) {
+    override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        NSNotificationCenter.defaultCenter().postNotificationName("dataSource", object: dataSource)
+        NotificationCenter.default.post(name: Notification.Name(rawValue: "dataSource"), object: dataSource)
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         dataSource.delegate = self
     }
@@ -89,18 +87,18 @@ class ViewController: UIViewController, DataProcessorDelegate {
     func sendingNewData(person: DataProcessor, type: speedDataType, data: ThreeAxesSystemDouble) {
         switch type {
         case .accelerate:
-            accX?.text = "\(roundNum(data.x))"
-            accY?.text = "\(roundNum(data.y))"
-            accZ?.text = "\(roundNum(data.z))"
+            accX?.text = "\(roundNum(number: data.x))"
+            accY?.text = "\(roundNum(number: data.y))"
+            accZ?.text = "\(roundNum(number: data.z))"
         case .velocity:
-            velX?.text = "\(roundNum(data.x))"
-            velY?.text = "\(roundNum(data.y))"
-            velZ?.text = "\(roundNum(data.z))"
-            currentSpeed.text = "\(Double(Int(modulus(data.x, y: data.y, z: data.z)*10))/10)"
+            velX?.text = "\(roundNum(number: data.x))"
+            velY?.text = "\(roundNum(number: data.y))"
+            velZ?.text = "\(roundNum(number: data.z))"
+            currentSpeed.text = "\(Double(Int(modulus(x: data.x, y: data.y, z: data.z)*10))/10)"
         case .distance:
-            disX?.text = "\(roundNum(data.x))"
-            disY?.text = "\(roundNum(data.y))"
-            disZ?.text = "\(roundNum(data.z))"
+            disX?.text = "\(roundNum(number: data.x))"
+            disY?.text = "\(roundNum(number: data.y))"
+            disZ?.text = "\(roundNum(number: data.z))"
         }
     }
     
